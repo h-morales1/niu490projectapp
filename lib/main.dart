@@ -239,7 +239,7 @@ class _MyHomePageState extends State<MyHomePage> {
               _submit();
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const TestDoc(title: "test")),
+                MaterialPageRoute(builder: (context) => TestDoc(title: "test", baseUrl: baseUrl,)),
               );
             }, child: const Text('Submit'),)
           ],
