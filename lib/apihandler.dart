@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'dart:io';
 import 'package:http_parser/http_parser.dart';
@@ -37,20 +39,39 @@ class ApiHandler {
 
     final response = await dio.post('$baseUrl/train/app', data: formData); // post request to baseurl+specified path
     print(response);
+
   }
 
   /*
     POST: posts test file for testing against model
    */
-  void testModel(File testFile) async {
+  Future<void> testModel(File testFile) async {
     String fileName = testFile.path.split('/').last; // get file name for test doc
 
     // piece together formdata to post test file to server for testing
     final formData = FormData.fromMap({
-      'test_file': await MultipartFile.fromFile(testFile.path, filename: fileName, contentType: MediaType("application/zip", "application/octet-stream"))
+      'test_file': await MultipartFile.fromFile(testFile.path, filename: fileName, contentType: MediaType("text/plain", "application/octet-stream"))
     });
 
     final response = await dio.post('$baseUrl/test/app', data: formData); // post request
     print(response);
+  }
+
+  Future<List> getResults() async {
+    Map<String, dynamic> data = {"init": 0.0};
+    //Map<String, double> scores = {"init": 0.0};
+    double aiScore = 0.0;
+    double humanScore = 0.0;
+
+    final response = await dio.get('$baseUrl/results/app');
+    if(response.statusCode == 200) {
+      data = response.data;
+      aiScore = data['simscoreai'];
+      humanScore = data['simscoreh'];
+      print(aiScore);
+      return [aiScore, humanScore];
+      print(data);
+    }
+    return [aiScore, humanScore];
   }
 }
