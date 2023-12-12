@@ -6,7 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 
 class TestDoc extends StatefulWidget {
-  const TestDoc({super.key, required this.title});
+  const TestDoc({super.key, required this.title, required this.baseUrl});
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -18,6 +18,11 @@ class TestDoc extends StatefulWidget {
   // always marked "final".
 
   final String title;
+  final String? baseUrl;
+
+  String? getBaseUrl() {
+    return baseUrl;
+  }
 
   @override
   State<TestDoc> createState() => _TestDocState();
@@ -25,7 +30,7 @@ class TestDoc extends StatefulWidget {
 
 class _TestDocState extends State<TestDoc> {
   String urlPrefix = "http://";
-  String? baseUrl; // will be combination of urlPrefix + _serverIp.text
+  //String? baseUrl; // will be combination of urlPrefix + _serverIp.text
   ApiHandler handler = ApiHandler();
   FilePickerResult? result;
   String? _fileName;
@@ -35,6 +40,13 @@ class _TestDocState extends State<TestDoc> {
   String? humanTraining;
   File? humanF;
   File? aiF;
+  File? test_file;
+  //late Future<Map<String, double>> data;
+  var scores = [];
+
+  Color humanIconColor = Colors.grey;
+  Color aiIconColor = Colors.grey;
+
   void pickFile(bool trainHuman) async {
     try{
 
@@ -51,8 +63,6 @@ class _TestDocState extends State<TestDoc> {
       await Permission.mediaLibrary.request();
       print(res.isGranted);
       print(r.isGranted);
-      File? hu;
-      File? ai;
       // uploading
       setState(() {
         isLoading = true;
@@ -63,15 +73,11 @@ class _TestDocState extends State<TestDoc> {
         allowMultiple: false,
       );
 
+      // make sure a file got selected
       if(result != null) {
         _fileName = result!.files.first.name;
-        if(trainHuman) {
-          humanTraining = result!.paths.toString();
-          humanF = File(result!.files.single.path!);
-        } else {
-          aiTraining = result!.paths.toString();
-          aiF = File(result!.files.single.path!);
-        }
+        // assign selected test doc to test_file
+        test_file = File(result!.files.single.path!);
       }
 
       // upload done
@@ -86,13 +92,17 @@ class _TestDocState extends State<TestDoc> {
     }
   }
 
-  void _submit() {
+  /*
+    Upload Test document (txt) to server
+    Return results
+   */
+  Future<void> _submit(String? ip) async {
     setState(() {
       // set the ip for the handler to talk to server
       //String isolatedIp = _serverIp.text.toString();
       //baseUrl = '$urlPrefix$isolatedIp';
 
-      //handler.setBaseUrl(baseUrl!);
+      handler.setBaseUrl(ip!);
 
     });
 
@@ -101,6 +111,20 @@ class _TestDocState extends State<TestDoc> {
     //int ep = int.parse(_epochs.value.text.toString());
     // make POST request to train model using data from input fields
     //handler.trainModel(vecSize, ep, aiF!, humanF!);
+    await handler.testModel(test_file!);
+    scores = await handler.getResults();
+    print(scores[0]);
+    print("test $scores");
+    setState(() {
+      if(scores[0] > scores[1]){
+        aiIconColor = Colors.green;
+        humanIconColor = Colors.grey;
+      } else {
+        humanIconColor = Colors.green;
+        aiIconColor = Colors.grey;
+      }
+    });
+    //data = (await handler.getResults()) as Future<Map<String, double>>;
   }
 
 
@@ -151,24 +175,24 @@ class _TestDocState extends State<TestDoc> {
               }, child: const Text('Choose Document to test'),),
             ),
             ElevatedButton(onPressed: () {
-              _submit();
+              _submit(widget.baseUrl);
             }, child: const Text('Submit'),),
             const SizedBox(
               width: 10.0,
               height: 40.0,
             ),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Results: "),
+                const Text("Results: "),
                Icon(
                  Icons.adb,
-                 color: Colors.green,
+                 color: aiIconColor,
                  size: 50.0,
                ) ,
                 Icon(
                   Icons.accessibility,
-                  color: Colors.grey,
+                  color: humanIconColor,
                   size: 50.0,
                 ),
               ],
